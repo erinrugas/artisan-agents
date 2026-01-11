@@ -39,6 +39,12 @@ curl -fsSL https://raw.githubusercontent.com/erinrugas/artisan-agents/main/insta
 
 Tip: For a richer TUI experience, install `gum` and the installer will use it automatically.
 
+To use release assets, create a release (or run the release workflow) so `install-agents.sh` is uploaded:
+
+```sh
+curl -fsSL https://github.com/erinrugas/artisan-agents/releases/latest/download/install-agents.sh | sh -s -- --dest /path/to/project --platform claude
+```
+
 ## Installed structure
 Example layout inside a project:
 
