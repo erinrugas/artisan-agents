@@ -24,10 +24,10 @@ cd artisan-agents
 chmod +x install-agents.sh
 ```
 
-2) Or run via curl (no clone):
+2) Or run via curl (no clone, latest release asset):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/erinrugas/artisan-agents/main/install-agents.sh | sh -s -- --dest /path/to/project --platform claude
+curl -fsSL https://github.com/erinrugas/artisan-agents/releases/latest/download/install-agents.sh | sh -s -- --dest /path/to/project --platform claude
 ```
 
 3) Install into a project (interactive by default):

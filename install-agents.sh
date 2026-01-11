@@ -11,6 +11,11 @@ PLATFORM="claude"
 DEFAULT_MODEL=""
 INTERACTIVE=1
 
+INPUT_FD="/dev/stdin"
+if [ ! -t 0 ] && [ -r /dev/tty ]; then
+  INPUT_FD="/dev/tty"
+fi
+
 for p in "$HOME/.local/bin" /usr/local/bin /opt/homebrew/bin /usr/bin; do
   case ":$PATH:" in
     *":$p:"*) ;;
@@ -18,7 +23,7 @@ for p in "$HOME/.local/bin" /usr/local/bin /opt/homebrew/bin /usr/bin; do
   esac
 done
 
-if command -v gum >/dev/null 2>&1; then
+if command -v gum >/dev/null 2>&1 && [ -t 0 ] && [ -t 1 ]; then
   HAS_GUM=1
 else
   HAS_GUM=0
@@ -59,12 +64,12 @@ prompt_value() {
   else
     printf "%s%s%s: " "$C_BOLD" "$prompt" "$C_RESET" >&2
   fi
-  read -r input
-  if [ -n "$input" ]; then
-    printf "%s" "$input"
-  else
-    printf "%s" "$default"
-  fi
+    read -r input < "$INPUT_FD"
+    if [ -n "$input" ]; then
+      printf "%s" "$input"
+    else
+      printf "%s" "$default"
+    fi
 }
 
 select_value() {
@@ -84,7 +89,7 @@ select_value() {
       i=$((i + 1))
     done
     printf "%s%s%s [1]: " "$C_BOLD" "$prompt" "$C_RESET" >&2
-    read -r choice
+      read -r choice < "$INPUT_FD"
     [ -z "$choice" ] && choice=1
     case "$choice" in
       *[!0-9]*|"") ;;
@@ -114,7 +119,7 @@ confirm_value() {
     return 1
   fi
   printf "%s%s%s (Y/n): " "$C_BOLD" "$prompt" "$C_RESET" >&2
-  read -r input
+  read -r input < "$INPUT_FD"
   case "$input" in
     n|N) return 1 ;;
     *) return 0 ;;
