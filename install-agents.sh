@@ -181,6 +181,24 @@ USAGE
 AGENTS_SRC="$SOURCE_DIR/agents"
 SPECS_SRC="$SOURCE_DIR/specs"
 
+download_bundle() {
+  BUNDLE_URL="${RELEASE_BUNDLE_URL:-https://github.com/erinrugas/artisan-agents/releases/latest/download/artisan-agents.tar.gz}"
+  if ! command -v curl >/dev/null 2>&1; then
+    echo "curl is required to download bundle: $BUNDLE_URL" >&2
+    return 1
+  fi
+  if ! command -v tar >/dev/null 2>&1; then
+    echo "tar is required to extract bundle." >&2
+    return 1
+  fi
+  tmp_dir=$(mktemp -d)
+  curl -fsSL "$BUNDLE_URL" -o "$tmp_dir/artisan-agents.tar.gz"
+  tar -xzf "$tmp_dir/artisan-agents.tar.gz" -C "$tmp_dir"
+  SOURCE_DIR="$tmp_dir"
+  AGENTS_SRC="$SOURCE_DIR/agents"
+  SPECS_SRC="$SOURCE_DIR/specs"
+}
+
 if [ "$INTERACTIVE" -eq 1 ]; then
   if [ "$HAS_GUM" -eq 1 ]; then
     gum style --border normal --padding "1 2" --bold "Artisan Agents Installer"
@@ -284,14 +302,22 @@ SPECS_DEST="$CONFIG_DIR/specs"
 CONFIG_PATH="$CONFIG_DIR/config.json"
 MCP_PATH="$CONFIG_DIR/mcp.json"
 
-if [ ! -d "$AGENTS_SRC" ]; then
-  echo "Missing agents directory: $AGENTS_SRC" >&2
-  exit 1
-fi
-
-if [ ! -d "$SPECS_SRC" ]; then
-  echo "Missing specs directory: $SPECS_SRC" >&2
-  exit 1
+if [ ! -d "$AGENTS_SRC" ] || [ ! -d "$SPECS_SRC" ]; then
+  if [ "$INTERACTIVE" -eq 1 ]; then
+    if confirm_value "Agents/specs not found. Download bundle?"; then
+      if ! download_bundle; then
+        exit 1
+      fi
+    else
+      echo "Missing agents/specs. Use --source or clone the repo." >&2
+      exit 1
+    fi
+  else
+    if ! download_bundle; then
+      echo "Missing agents/specs. Use --source or clone the repo." >&2
+      exit 1
+    fi
+  fi
 fi
 
 mkdir -p "$AGENTS_DEST" "$SPECS_DEST"
