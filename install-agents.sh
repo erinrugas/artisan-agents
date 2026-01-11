@@ -353,7 +353,7 @@ Frontend:       $frontend
 Infra:          $infra
 CI/CD:          $cicd"
     if [ "$HAS_GUM" -eq 1 ]; then
-      gum style --border normal --padding "1 2" --bold "Summary"$'\n'"$summary_block" >&2
+      printf "Summary\n%s\n" "$summary_block" | gum style --border normal --padding "1 2" --bold >&2
     else
       echo "${C_BOLD}Summary:${C_RESET}" >&2
       echo "${C_DIM}----------------------------------${C_RESET}" >&2
@@ -425,7 +425,7 @@ Installed specs to:  $SPECS_DEST
 Config file:         $CONFIG_PATH
 MCP config:          $MCP_PATH"
 if [ "$HAS_GUM" -eq 1 ]; then
-  gum style --border normal --padding "1 2" --bold "Result"$'\n'"$result_block"
+  printf "Result\n%s\n" "$result_block" | gum style --border normal --padding "1 2" --bold
 else
   echo "${C_BOLD}Result:${C_RESET}"
   echo "${C_DIM}----------------------------------${C_RESET}"
@@ -443,7 +443,7 @@ next_steps_text="1) Edit specs:        $SPEC_PATH
 5) Review agents:     add/remove profiles to match your team needs"
 
 if [ "$HAS_GUM" -eq 1 ]; then
-  gum style --border normal --padding "1 2" --bold "Next steps:"$'\n'"$next_steps_text"
+  printf "Next steps:\n%s\n" "$next_steps_text" | gum style --border normal --padding "1 2" --bold
 else
   max_len=0
   while IFS= read -r line; do
