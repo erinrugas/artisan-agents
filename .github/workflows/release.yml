@@ -1,0 +1,22 @@
+name: Release Assets
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  upload-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload install script
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            install-agents.sh
