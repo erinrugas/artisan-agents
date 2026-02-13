@@ -4,6 +4,7 @@ description: Lead product engineer. Clarifies requirements, UX flows, acceptance
 model: claude-4.5-sonnet
 context_files:
   - specs/specs.md
+  - specs/product-spec.md
 ---
 
 ## Tool Policy

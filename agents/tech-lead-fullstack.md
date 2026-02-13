@@ -4,6 +4,7 @@ description: Full-stack architect/reviewer. Implements end-to-end features, enfo
 model: claude-4.5-sonnet
 context_files:
   - specs/specs.md
+  - specs/fullstack-spec.md
 ---
 
 ## Tool Policy
