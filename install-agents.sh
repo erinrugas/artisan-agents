@@ -4,12 +4,13 @@
 
 set -eu
 
-SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 SOURCE_DIR="$SCRIPT_DIR"
 DEST_DIR="."
 PLATFORM="claude"
 DEFAULT_MODEL=""
 INTERACTIVE=1
+TMP_DOWNLOAD_DIR=""
 
 INPUT_FD="/dev/stdin"
 if [ ! -t 0 ] && [ -r /dev/tty ]; then
@@ -129,18 +130,34 @@ confirm_value() {
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --dest)
+      if [ "$#" -lt 2 ]; then
+        echo "Missing value for --dest" >&2
+        exit 1
+      fi
       DEST_DIR="$2"
       shift 2
       ;;
     --source)
+      if [ "$#" -lt 2 ]; then
+        echo "Missing value for --source" >&2
+        exit 1
+      fi
       SOURCE_DIR="$2"
       shift 2
       ;;
     --platform)
+      if [ "$#" -lt 2 ]; then
+        echo "Missing value for --platform" >&2
+        exit 1
+      fi
       PLATFORM="$2"
       shift 2
       ;;
     --model)
+      if [ "$#" -lt 2 ]; then
+        echo "Missing value for --model" >&2
+        exit 1
+      fi
       DEFAULT_MODEL="$2"
       shift 2
       ;;
@@ -154,11 +171,11 @@ while [ "$#" -gt 0 ]; do
       ;;
     -h|--help)
       cat <<'USAGE'
-Install artisan agents and specs into a project.
+Install artisan agents, specs, and skills into a project.
 
 Options:
   --dest <project_dir>   Destination project root (default: current directory)
-  --source <source_dir>  Source root containing agents/ and specs/ (default: script directory)
+  --source <source_dir>  Source root containing agents/, specs/, and skills/ (default: script directory)
   --platform <name>      Platform: claude | codex | opencode | cursor | agents (default: claude)
   --model <name>         Override default model for config.json
   --interactive          Prompt for options (default)
@@ -180,6 +197,15 @@ USAGE
 
 AGENTS_SRC="$SOURCE_DIR/agents"
 SPECS_SRC="$SOURCE_DIR/specs"
+SKILLS_SRC="$SOURCE_DIR/skills"
+
+cleanup_tmp_download() {
+  if [ -n "$TMP_DOWNLOAD_DIR" ] && [ -d "$TMP_DOWNLOAD_DIR" ]; then
+    rm -rf "$TMP_DOWNLOAD_DIR"
+  fi
+}
+
+trap cleanup_tmp_download EXIT INT TERM
 
 download_bundle() {
   BUNDLE_URL="${RELEASE_BUNDLE_URL:-https://github.com/erinrugas/artisan-agents/releases/latest/download/artisan-agents.tar.gz}"
@@ -192,11 +218,17 @@ download_bundle() {
     return 1
   fi
   tmp_dir=$(mktemp -d)
+  TMP_DOWNLOAD_DIR="$tmp_dir"
   curl -fsSL "$BUNDLE_URL" -o "$tmp_dir/artisan-agents.tar.gz"
   tar -xzf "$tmp_dir/artisan-agents.tar.gz" -C "$tmp_dir"
-  SOURCE_DIR="$tmp_dir"
+  if [ -d "$tmp_dir/artisan-agents" ]; then
+    SOURCE_DIR="$tmp_dir/artisan-agents"
+  else
+    SOURCE_DIR="$tmp_dir"
+  fi
   AGENTS_SRC="$SOURCE_DIR/agents"
   SPECS_SRC="$SOURCE_DIR/specs"
+  SKILLS_SRC="$SOURCE_DIR/skills"
 }
 
 if [ "$INTERACTIVE" -eq 1 ]; then
@@ -299,28 +331,29 @@ esac
 
 AGENTS_DEST="$CONFIG_DIR/agents"
 SPECS_DEST="$CONFIG_DIR/specs"
+SKILLS_DEST="$CONFIG_DIR/skills"
 CONFIG_PATH="$CONFIG_DIR/config.json"
 MCP_PATH="$CONFIG_DIR/mcp.json"
 
-if [ ! -d "$AGENTS_SRC" ] || [ ! -d "$SPECS_SRC" ]; then
+if [ ! -d "$AGENTS_SRC" ] || [ ! -d "$SPECS_SRC" ] || [ ! -d "$SKILLS_SRC" ]; then
   if [ "$INTERACTIVE" -eq 1 ]; then
-    if confirm_value "Agents/specs not found. Download bundle?"; then
+    if confirm_value "Agents/specs/skills not found. Download bundle?"; then
       if ! download_bundle; then
         exit 1
       fi
     else
-      echo "Missing agents/specs. Use --source or clone the repo." >&2
+      echo "Missing agents/specs/skills. Use --source or clone the repo." >&2
       exit 1
     fi
   else
     if ! download_bundle; then
-      echo "Missing agents/specs. Use --source or clone the repo." >&2
+      echo "Missing agents/specs/skills. Use --source or clone the repo." >&2
       exit 1
     fi
   fi
 fi
 
-mkdir -p "$AGENTS_DEST" "$SPECS_DEST"
+mkdir -p "$AGENTS_DEST" "$SPECS_DEST" "$SKILLS_DEST"
 
 for f in "$AGENTS_SRC"/*.md; do
   [ -e "$f" ] || continue
@@ -329,6 +362,13 @@ done
 for f in "$SPECS_SRC"/*.md; do
   [ -e "$f" ] || continue
   cp -f "$f" "$SPECS_DEST/"
+done
+for d in "$SKILLS_SRC"/*; do
+  [ -d "$d" ] || continue
+  skill_name=$(basename "$d")
+  rm -rf "${SKILLS_DEST:?}/${skill_name:?}"
+  mkdir -p "$SKILLS_DEST/$skill_name"
+  cp -R "$d"/. "$SKILLS_DEST/$skill_name/"
 done
 
 SPEC_PATH="$SPECS_DEST/specs.md"
@@ -428,6 +468,7 @@ for f in "$AGENTS_DEST"/*.md; do
   tmp=$(mktemp)
   sed "s/^model: .*/model: $DEFAULT_MODEL/" "$f" > "$tmp"
   mv "$tmp" "$f"
+  chmod 0644 "$f"
 done
 
 if [ ! -f "$CONFIG_PATH" ]; then
@@ -435,6 +476,7 @@ if [ ! -f "$CONFIG_PATH" ]; then
 {
   "agents_path": "agents",
   "specs_path": "specs",
+  "skills_path": "skills",
   "platform": "$PLATFORM",
   "default_model": "$DEFAULT_MODEL"
 }
@@ -453,6 +495,7 @@ echo ""
 result_block="Platform:            $PLATFORM
 Installed agents to: $AGENTS_DEST
 Installed specs to:  $SPECS_DEST
+Installed skills to: $SKILLS_DEST
 Config file:         $CONFIG_PATH
 MCP config:          $MCP_PATH"
 if [ "$HAS_GUM" -eq 1 ]; then
@@ -463,15 +506,17 @@ else
   echo "Platform:          $PLATFORM"
   echo "${C_GREEN}Installed agents to:${C_RESET} $AGENTS_DEST"
   echo "${C_GREEN}Installed specs to:${C_RESET}  $SPECS_DEST"
+  echo "${C_GREEN}Installed skills to:${C_RESET} $SKILLS_DEST"
   echo "Config file:         $CONFIG_PATH"
   echo "MCP config:          $MCP_PATH"
 fi
 echo ""
 next_steps_text="1) Edit specs:        $SPEC_PATH
 2) Fill Overview:     product summary, goals, non-goals
-3) Review Stack:      update any Notes
-4) Review sections:   update per project requirements
-5) Review agents:     add/remove profiles to match your team needs"
+3) Fill role specs:   product/security/qa/devops/ui/fullstack/workflow
+4) Review Stack:      update any Notes
+5) Review agents:     add/remove profiles to match your team needs
+6) Review skills:     keep only workflows your team uses"
 
 if [ "$HAS_GUM" -eq 1 ]; then
   printf "Next steps:\n%s\n" "$next_steps_text" | gum style --border normal --padding "1 2" --bold

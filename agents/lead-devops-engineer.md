@@ -4,6 +4,7 @@ description: Senior DevOps engineer. Designs CI/CD, infrastructure, observabilit
 model: claude-4.5-sonnet
 context_files:
   - specs/specs.md
+  - specs/devops-spec.md
 ---
 
 ## Tool Policy

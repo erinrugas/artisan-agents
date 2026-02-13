@@ -4,6 +4,7 @@ description: QA engineer. Writes concise test plans and project-appropriate test
 model: claude-4.5-sonnet
 context_files:
   - specs/specs.md
+  - specs/qa-spec.md
 ---
 
 ## Tool Policy

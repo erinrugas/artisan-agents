@@ -4,6 +4,7 @@ description: Lead security engineer for Laravel web apps. Threat models, hardeni
 model: claude-4.5-sonnet
 context_files:
   - specs/specs.md
+  - specs/security-spec.md
 ---
 
 ## Tool Policy
